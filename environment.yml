@@ -131,9 +131,9 @@ dependencies:
       - threadpoolctl
       - tokenizers
       - toml
-      - torch
-      - torchaudio
-      - torchvision
+      - torch=2.4.1+cu124
+      - torchaudio=2.4.1+cu124
+      - torchvision=0.19.1+cu124
       - tornado
       - tqdm
       - transformers
