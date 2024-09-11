@@ -1,0 +1,21 @@
+name: ragproject
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - accelerate
+      - bitsandbytes
+      - chromadb
+      - huggingface-hub
+      - langchain
+      - langchain-community
+      - langchain-core
+      - langchain-huggingface
+      - langchain-text-splitters
+      - torch
+      - torchvision
+      - torchaudio
+      - streamlit
+      - transformers
