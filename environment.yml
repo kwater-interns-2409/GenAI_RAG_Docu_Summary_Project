@@ -3,10 +3,6 @@ channels:
   - defaults
 dependencies:
   - python=3.12
-  - pytorch
-  - torchvision
-  - torchaudio
-  - pytorch-cuda=12.4
   - pip
   - pip:
       - accelerate
@@ -18,5 +14,9 @@ dependencies:
       - langchain-core
       - langchain-huggingface
       - langchain-text-splitters
+      - --index-url https://download.pytorch.org/whl/cu124
+        - torch
+        - torchvision
+        - torchaudio
       - streamlit
       - transformers
