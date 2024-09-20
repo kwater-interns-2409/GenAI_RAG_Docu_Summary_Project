@@ -1,5 +1,6 @@
 import streamlit as st
 from rag_functions import load_docs, create_vectorstore, create_rag_chain
+import time
 
 st.title("RAG Q&A 시스템")
 st.sidebar.title("소개")
@@ -15,6 +16,7 @@ question = st.text_input("질문하세요:")
 if question:
     if st.button("답변 받기"):
         with st.spinner("처리 중..."):
+            start_time=time.time()
             # 문서 로드 및 분할
             splits = load_docs(files)
             
@@ -23,6 +25,10 @@ if question:
             
             # RAG 체인 생성
             result = create_rag_chain(vectorstore, question, on)
+            
+            end_time=time.time()
+            print("걸린 시간: ", end="")
+            print(time.strftime("%H:%M:%S", time.gmtime(end_time-start_time)))
             
             st.subheader("답변:")
             st.write(result)
