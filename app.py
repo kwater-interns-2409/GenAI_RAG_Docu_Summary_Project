@@ -8,6 +8,7 @@ st.sidebar.info(
     "이 앱은 RAG(검색 증강 생성) 시스템을 시연합니다. "
 )
 on=st.sidebar.toggle("RAG 기능 키기", True)
+openai_on=st.sidebar.toggle("OpenAI 사용", True)
 # 데이터베이스에 문서 추가
 files=st.sidebar.file_uploader("RAG에 추가할 문서를 넣어주세요.", type=["txt"], accept_multiple_files=True)
 # 사용자 입력
@@ -24,9 +25,11 @@ if question:
             vectorstore = create_vectorstore(splits)
             
             # RAG 체인 생성
-            # result = create_rag_chain(vectorstore, question, on)
-            result = create_github_rag_chain(vectorstore, question, on)
-            
+            if openai_on:
+                result = create_github_rag_chain(vectorstore, question)
+            else :
+                result = create_rag_chain(vectorstore, question, on)
+
             end_time=time.time()
             print("걸린 시간: ", end="")
             print(time.strftime("%H:%M:%S", time.gmtime(end_time-start_time)))

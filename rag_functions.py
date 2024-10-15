@@ -1,4 +1,4 @@
-
+import streamlit as st
 import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
@@ -14,7 +14,7 @@ from openai import OpenAI
 
 # huggingface 모델 사용하기 위해 필요한 개인키
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
-githubkey=os.environ["GITHUB_TOKEN"] = "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"
+githubkey=os.environ["GITHUB_TOKEN"] = st.secrets["GITHUB_TOKEN"]
 
 #모든 문서를 백터화할 작은 단위로 나눈다.
 def load_docs(files):
@@ -158,7 +158,7 @@ def create_rag_chain(vectorstore, question, on):
 
     return true_answer
 
-def create_github_rag_chain(vectorstore, question, on):
+def create_github_rag_chain(vectorstore, question):
     client=OpenAI(api_key=githubkey, base_url="https://models.inference.ai.azure.com")
     
     def format_docs(docs):
