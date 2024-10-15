@@ -10,10 +10,11 @@ import torch
 import re
 from nltk.translate.bleu_score import sentence_bleu
 from rouge_score import rouge_scorer
-from io import StringIO
+from openai import OpenAI
 
 # huggingface 모델 사용하기 위해 필요한 개인키
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
+githubkey=os.environ["GITHUB_TOKEN"] = "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"
 
 #모든 문서를 백터화할 작은 단위로 나눈다.
 def load_docs(files):
@@ -72,6 +73,7 @@ def create_vectorstore(splits):
 
 #사용자한테 받은 질문으로 필요한 context를 찾은 후 프롬프트를 만들어 준비한 모델에 넣어 대답을 받는다.
 def create_rag_chain(vectorstore, question, on):
+    # READER_MODEL_NAME = "openchat/openchat_3.5"
     READER_MODEL_NAME = "maywell/Synatra-V0.1-7B-Instruct"
     # 크기와 복잡도를 줄이기 위해 파라미터 무게를 원래보다 더 작은 타입으로 바꾸는 quantization을 한다.
     bnb_config = BitsAndBytesConfig(
@@ -81,12 +83,11 @@ def create_rag_chain(vectorstore, question, on):
         bnb_4bit_compute_dtype=torch.bfloat16,
     )
     if torch.cuda.is_available():
-        model = AutoModelForCausalLM.from_pretrained(READER_MODEL_NAME, quantization_config=bnb_config).to("cuda:0")
-        tokenizer = AutoTokenizer.from_pretrained(READER_MODEL_NAME).to("cuda:0")
+        model = AutoModelForCausalLM.from_pretrained(READER_MODEL_NAME, quantization_config=bnb_config)
+        tokenizer = AutoTokenizer.from_pretrained(READER_MODEL_NAME)
     else:
         model = AutoModelForCausalLM.from_pretrained(READER_MODEL_NAME)
         tokenizer = AutoTokenizer.from_pretrained(READER_MODEL_NAME)
-
 
     #준비한 모델
     llm = pipeline(
@@ -156,3 +157,31 @@ def create_rag_chain(vectorstore, question, on):
         print(f'\t{key}: {scores[key]}')
 
     return true_answer
+
+def create_github_rag_chain(vectorstore, question, on):
+    client=OpenAI(api_key=githubkey, base_url="https://models.inference.ai.azure.com")
+    
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
+    
+    response=client.chat.completions.create(
+        messages=[
+            {
+                "role": "system",
+                "content": f"""아래의 문맥을 사용하여 질문에 답하십시오.
+                만약 답을 모른다면, 모른다고 말하고 답을 지어내지 마십시오.
+                최대한 세 문장으로 답하고 가능한 한 간결하게 유지하십시오.
+                {format_docs(vectorstore.as_retriever().invoke(question))}"""
+            },
+            {
+                "role": "user",
+                "content": f'{question}'
+            }
+        ],
+        temperature=1.0,
+        top_p=1.0,
+        max_tokens=1000,
+        model="gpt-4o-mini"
+    )
+
+    return response.choices[0].message.content

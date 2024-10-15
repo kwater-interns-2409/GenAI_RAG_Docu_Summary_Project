@@ -1,5 +1,5 @@
 import streamlit as st
-from rag_functions import load_docs, create_vectorstore, create_rag_chain
+from rag_functions import load_docs, create_vectorstore, create_rag_chain, create_github_rag_chain
 import time
 
 st.title("RAG Q&A 시스템")
@@ -24,7 +24,8 @@ if question:
             vectorstore = create_vectorstore(splits)
             
             # RAG 체인 생성
-            result = create_rag_chain(vectorstore, question, on)
+            # result = create_rag_chain(vectorstore, question, on)
+            result = create_github_rag_chain(vectorstore, question, on)
             
             end_time=time.time()
             print("걸린 시간: ", end="")
