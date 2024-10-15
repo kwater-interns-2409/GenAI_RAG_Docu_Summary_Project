@@ -11,6 +11,7 @@ import re
 from nltk.translate.bleu_score import sentence_bleu
 from rouge_score import rouge_scorer
 from openai import OpenAI
+import chromadb
 
 # huggingface 모델 사용하기 위해 필요한 개인키
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
@@ -62,6 +63,7 @@ def load_docs(files):
 
 #chroma를 이용해서 나누어진 문서 chunk들을 임베드하고 벡터스토어를 만든다.
 def create_vectorstore(splits):
+    chromadb.api.client.SharedSystemClient.clear_system_cache()
     embeddings = HuggingFaceEmbeddings(
         model_name="jhgan/ko-sroberta-multitask",
         model_kwargs={'device':('cuda:0' if torch.cuda.is_available() else 'cpu')}, # Pass the model configuration options
