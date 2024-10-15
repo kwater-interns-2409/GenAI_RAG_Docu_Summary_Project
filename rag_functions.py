@@ -14,7 +14,7 @@ from openai import OpenAI
 
 # huggingface 모델 사용하기 위해 필요한 개인키
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
-githubkey=os.environ["GITHUB_TOKEN"] = "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"
+githubkey=os.environ["GITHUB_TOKEN"] = ${{ secrets.GITHUB_TOKEN }}
 
 #모든 문서를 백터화할 작은 단위로 나눈다.
 def load_docs(files):
