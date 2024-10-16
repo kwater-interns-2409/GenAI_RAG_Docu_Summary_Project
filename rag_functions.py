@@ -12,37 +12,36 @@ from nltk.translate.bleu_score import sentence_bleu
 from rouge_score import rouge_scorer
 from openai import OpenAI
 import chromadb
+from io import StringIO
+import charset_normalizer as cn
 
 # huggingface 모델 사용하기 위해 필요한 개인키
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
 githubkey=os.environ["GITHUB_TOKEN"] = st.secrets["GITHUB_TOKEN"]
+data_path="./data"
 
 #모든 문서를 백터화할 작은 단위로 나눈다.
 def load_docs(files):
     #문서를 저장할 data 디렉토리를 찾고, 존재하지 않으면 만든다.
-    if os.path.isdir("./data"):
-        os.chdir("./data")
-    else:
-        os.mkdir("./data")
+    if not os.path.isdir(data_path):
+        os.mkdir(data_path)
     
     #streamlit ui를 통해 추가한 문서들을 data 디렉토리로 저장한다. 문서 내에 줄들 사이에 공백이 너무 크면 줄바꿈을 하나로 줄인다.
     for file in files:
-        savefile=open(file.name, "w")
-        savefile.write(re.sub('\s\s+', '\n', file.read()))
-
-        file.close()
+        stringio = StringIO(file.getvalue().decode(cn.detect(file.getvalue())["encoding"]))
+        savefile=open(os.path.join(data_path, file.name), "w", encoding="utf-8")
+        savefile.write(stringio.read())
         savefile.close()
 
     #확장자에 따라 문서를 로드한다.
     documents=[]
-    for file in [f for f in os.listdir(os.curdir) if os.path.isfile(os.path.join(os.curdir, f))]:
-        _, ext=file.split(".")
+    for file in [os.path.join(data_path, f) for f in os.listdir(data_path)]:
+        ext=file.split(".")[-1]
         if ext=="pdf":
             loader=PyPDFLoader(file)
         elif ext=="txt":
-            loader=TextLoader(file, encoding='utf-8')
+            loader=TextLoader(file_path=file, encoding='utf-8')
         documents += loader.load()
-    os.chdir("..")
 
     # RecursiveCharacterTextSplitter는 chunk 크기보다 separators를 더 중요시해 이상한 지점에 문서를 나누기보다 줄 끝과 단어 사이에
     # 나누기 때문에 선택하게 되었다.
@@ -160,14 +159,14 @@ def create_rag_chain(vectorstore, question, on):
 
     return true_answer
 
-def create_github_rag_chain(vectorstore, question):
+def create_github_rag_chain(vectorstore, question, on):
     client=OpenAI(api_key=githubkey, base_url="https://models.inference.ai.azure.com")
     
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
     
-    response=client.chat.completions.create(
-        messages=[
+    if on:
+        message=[
             {
                 "role": "system",
                 "content": f"""아래의 문맥을 사용하여 질문에 답하십시오.
@@ -179,7 +178,22 @@ def create_github_rag_chain(vectorstore, question):
                 "role": "user",
                 "content": f'{question}'
             }
-        ],
+        ]
+    else:
+        message=[
+            {
+                "role": "system",
+                "content": f"""만약 답을 모른다면, 모른다고 말하고 답을 지어내지 마십시오.
+                최대한 세 문장으로 답하고 가능한 한 간결하게 유지하십시오."""
+            },
+            {
+                "role": "user",
+                "content": f'{question}'
+            }
+        ]
+
+    response=client.chat.completions.create(
+        messages=message,
         temperature=1.0,
         top_p=1.0,
         max_tokens=1000,

@@ -2,6 +2,8 @@ import streamlit as st
 from rag_functions import load_docs, create_vectorstore, create_rag_chain, create_github_rag_chain
 import time
 
+
+
 st.title("RAG Q&A 시스템")
 st.sidebar.title("소개")
 st.sidebar.info(
@@ -10,7 +12,7 @@ st.sidebar.info(
 on=st.sidebar.toggle("RAG 기능 키기", True)
 openai_on=st.sidebar.toggle("OpenAI 사용", True)
 # 데이터베이스에 문서 추가
-files=st.sidebar.file_uploader("RAG에 추가할 문서를 넣어주세요.", type=["txt"], accept_multiple_files=True)
+files=st.sidebar.file_uploader("RAG에 추가할 문서를 넣어주세요.", type=["txt", "pdf", "doc"], accept_multiple_files=True)
 # 사용자 입력
 question = st.text_input("질문하세요:")
 
@@ -26,7 +28,7 @@ if question:
             
             # RAG 체인 생성
             if openai_on:
-                result = create_github_rag_chain(vectorstore, question)
+                result = create_github_rag_chain(vectorstore, question, on)
             else :
                 result = create_rag_chain(vectorstore, question, on)
 
