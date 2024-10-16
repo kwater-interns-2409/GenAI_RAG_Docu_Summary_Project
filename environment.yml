@@ -22,4 +22,5 @@ dependencies:
       - nltk
       - rouge-score
       - openai
-      - charset_normalizer
+      - langchain-teddynote
+      - python-docx

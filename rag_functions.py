@@ -3,8 +3,9 @@ import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain.prompts import PromptTemplate
-from langchain_community.document_loaders import PyPDFLoader, TextLoader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain_teddynote.document_loaders import HWPLoader
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, BitsAndBytesConfig
 import torch
 import re
@@ -12,8 +13,6 @@ from nltk.translate.bleu_score import sentence_bleu
 from rouge_score import rouge_scorer
 from openai import OpenAI
 import chromadb
-from io import StringIO
-import charset_normalizer as cn
 
 # huggingface 모델 사용하기 위해 필요한 개인키
 os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
@@ -28,10 +27,13 @@ def load_docs(files):
     
     #streamlit ui를 통해 추가한 문서들을 data 디렉토리로 저장한다. 문서 내에 줄들 사이에 공백이 너무 크면 줄바꿈을 하나로 줄인다.
     for file in files:
-        stringio = StringIO(file.getvalue().decode(cn.detect(file.getvalue())["encoding"]))
-        savefile=open(os.path.join(data_path, file.name), "w", encoding="utf-8")
-        savefile.write(stringio.read())
-        savefile.close()
+        # stringio = StringIO(file.getvalue().decode(cn.detect(file.getvalue())["encoding"]))
+        # savefile=open(os.path.join(data_path, file.name), "w", encoding="utf-8")
+        # savefile.write(stringio.read())
+        # savefile.close()
+        with open(os.path.join(data_path, file.name), 'wb') as f: 
+            f.write(file.getvalue())
+            f.close()
 
     #확장자에 따라 문서를 로드한다.
     documents=[]
@@ -40,7 +42,11 @@ def load_docs(files):
         if ext=="pdf":
             loader=PyPDFLoader(file)
         elif ext=="txt":
-            loader=TextLoader(file_path=file, encoding='utf-8')
+            loader=TextLoader(file, autodetect_encoding=True)
+        elif ext=="docx":
+            loader=Docx2txtLoader(file)
+        elif ext=="hwp":
+            loader=HWPLoader(file)
         documents += loader.load()
 
     # RecursiveCharacterTextSplitter는 chunk 크기보다 separators를 더 중요시해 이상한 지점에 문서를 나누기보다 줄 끝과 단어 사이에

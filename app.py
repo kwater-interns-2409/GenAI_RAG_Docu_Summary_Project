@@ -12,7 +12,7 @@ st.sidebar.info(
 on=st.sidebar.toggle("RAG 기능 키기", True)
 openai_on=st.sidebar.toggle("OpenAI 사용", True)
 # 데이터베이스에 문서 추가
-files=st.sidebar.file_uploader("RAG에 추가할 문서를 넣어주세요.", type=["txt", "pdf", "doc"], accept_multiple_files=True)
+files=st.sidebar.file_uploader("RAG에 추가할 문서를 넣어주세요.", type=["txt", "pdf", "docx", "hwp"], accept_multiple_files=True)
 # 사용자 입력
 question = st.text_input("질문하세요:")
 
