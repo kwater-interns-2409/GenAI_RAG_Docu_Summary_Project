@@ -80,8 +80,8 @@ def create_vectorstore(splits):
 
 #사용자한테 받은 질문으로 필요한 context를 찾은 후 프롬프트를 만들어 준비한 모델에 넣어 대답을 받는다.
 def create_rag_chain(vectorstore, question, on):
-    # READER_MODEL_NAME = "openchat/openchat_3.5"
-    READER_MODEL_NAME = "maywell/Synatra-V0.1-7B-Instruct"
+    READER_MODEL_NAME = "openchat/openchat_3.5"
+    # READER_MODEL_NAME = "maywell/Synatra-V0.1-7B-Instruct"
     # 크기와 복잡도를 줄이기 위해 파라미터 무게를 원래보다 더 작은 타입으로 바꾸는 quantization을 한다.
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
