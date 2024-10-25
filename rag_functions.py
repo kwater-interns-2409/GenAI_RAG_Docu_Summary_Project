@@ -15,7 +15,7 @@ from openai import OpenAI
 import chromadb
 
 # huggingface 모델 사용하기 위해 필요한 개인키
-os.environ["HUGGINGFACEHUB_API_TOKEN"] = "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"
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
 githubkey=os.environ["GITHUB_TOKEN"] = st.secrets["GITHUB_TOKEN"]
 data_path="./data"
 
@@ -27,10 +27,6 @@ def load_docs(files):
     
     #streamlit ui를 통해 추가한 문서들을 data 디렉토리로 저장한다. 문서 내에 줄들 사이에 공백이 너무 크면 줄바꿈을 하나로 줄인다.
     for file in files:
-        # stringio = StringIO(file.getvalue().decode(cn.detect(file.getvalue())["encoding"]))
-        # savefile=open(os.path.join(data_path, file.name), "w", encoding="utf-8")
-        # savefile.write(stringio.read())
-        # savefile.close()
         with open(os.path.join(data_path, file.name), 'wb') as f: 
             f.write(file.getvalue())
             f.close()
@@ -75,13 +71,15 @@ def create_vectorstore(splits):
         encode_kwargs={'normalize_embeddings': True}, # Pass the encoding options
     )
     vectorstore = Chroma.from_documents(documents=splits, embedding=embeddings)
+    print(f"split size: {len(splits)}")
+    print(f"vectorstore size: {vectorstore.__len__()}")
 
     return vectorstore
 
 #사용자한테 받은 질문으로 필요한 context를 찾은 후 프롬프트를 만들어 준비한 모델에 넣어 대답을 받는다.
 def create_rag_chain(vectorstore, question, on):
-    READER_MODEL_NAME = "openchat/openchat_3.5"
-    # READER_MODEL_NAME = "maywell/Synatra-V0.1-7B-Instruct"
+    # READER_MODEL_NAME = "openchat/openchat_3.5"
+    READER_MODEL_NAME = "maywell/Synatra-V0.1-7B-Instruct"
     # 크기와 복잡도를 줄이기 위해 파라미터 무게를 원래보다 더 작은 타입으로 바꾸는 quantization을 한다.
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -103,7 +101,7 @@ def create_rag_chain(vectorstore, question, on):
         task="text-generation",
         do_sample=True,
         temperature=0.2,
-        repetition_penalty=1.1,
+        repetition_penalty=1.3,
         return_full_text=False,
         max_new_tokens=500,
     )
@@ -112,8 +110,8 @@ def create_rag_chain(vectorstore, question, on):
     print(f'on is {on}')
     if on:
         prompt_template = """아래의 문맥을 사용하여 질문에 답하십시오.
-        만약 답을 모른다면, 모른다고 말하고 답을 지어내지 마십시오.
-        최대한 세 문장으로 답하고 가능한 한 간결하게 유지하십시오.
+        최대한 세 문장으로 답하고 가능한 간결하게 유지하십시오.
+        하지만, 질문이 문맥과 관련이 없으면 수자원공사의 공식 웹사이트나 고객센터에 문의하라고 말씀하십시오.
         {context}
         질문: {question}
         유용한 답변:"""
@@ -133,6 +131,8 @@ def create_rag_chain(vectorstore, question, on):
         )
 
     def format_docs(docs):
+        # print("check format docs")
+        # print(docs)
         return "\n\n".join(doc.page_content for doc in docs)
 
     #template에 정보와 질문을 넣은 후 모델에 던져 대답을 받는다.
@@ -149,7 +149,10 @@ def create_rag_chain(vectorstore, question, on):
     final_prompt=PROMPT.invoke(prompt_inputs)
     print(final_prompt)
     answer=llm(final_prompt.text)
+    print(answer)
     true_answer=answer[0]['generated_text'].split("질문:")[0].strip()
+    print(vectorstore.__len__())
+    vectorstore._client.delete_collection(vectorstore._collection.name)
 
     # 평가점수 얻기 위한 테스트용 코드
     reference_str="""1. 이용하려는 토지의 도면

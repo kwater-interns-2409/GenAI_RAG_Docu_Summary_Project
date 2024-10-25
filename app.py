@@ -11,7 +11,7 @@ with st.sidebar:
         "이 앱은 RAG(검색 증강 생성) 시스템을 시연합니다. "
     )
     on=st.toggle("RAG 기능 키기", True)
-    openai_on=st.toggle("OpenAI 사용", True)
+    openai_on=st.toggle("OpenAI 사용")
     # 데이터베이스에 문서 추가
     files=st.file_uploader("RAG에 추가할 문서를 넣어주세요.", type=["txt", "pdf", "docx", "hwp"], accept_multiple_files=True)
     file_browser_result=st_file_browser("./data", show_preview=False, show_delete_file=True)
