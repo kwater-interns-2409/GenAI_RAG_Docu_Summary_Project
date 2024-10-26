@@ -10,7 +10,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, BitsAndB
 import torch
 import re
 from nltk.translate.bleu_score import sentence_bleu
-from rouge_score import rouge_scorer
+from korouge_score import rouge_scorer
 from openai import OpenAI
 import pysqlite3
 import sys
@@ -168,7 +168,7 @@ def create_rag_chain(vectorstore, question, on):
     2. 매립폐기물의 종류ㆍ양 및 복토상태를 적은 서류
     3. 지적도"""
 
-    print("BLEU score: {}".format(sentence_bleu(reference_str.split(), true_answer.split())))
+    print("BLEU score: {}".format(sentence_bleu(reference_str.split(), true_answer.split(), weights=(1,0,0,0))))
     print("ROUGE score:")
     scorer=rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
     scores=scorer.score(reference_str, true_answer)
@@ -210,7 +210,7 @@ def create_github_rag_chain(vectorstore, question, on):
                 "content": f'{question}'
             }
         ]
-    print(message)
+    
     response=client.chat.completions.create(
         messages=message,
         temperature=1.0,
@@ -218,5 +218,17 @@ def create_github_rag_chain(vectorstore, question, on):
         max_tokens=1000,
         model="gpt-4o-mini"
     )
+
+    # 평가점수 얻기 위한 테스트용 코드
+    reference_str="""1. 이용하려는 토지의 도면
+    2. 매립폐기물의 종류ㆍ양 및 복토상태를 적은 서류
+    3. 지적도"""
+    
+    print("BLEU score: {}".format(sentence_bleu([reference_str.split()], response.choices[0].message.content.split(), weights=(1,0,0,0))))
+    print("ROUGE score:")
+    scorer=rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+    scores=scorer.score(reference_str, response.choices[0].message.content)
+    for key in scores:
+        print(f'\t{key}: {scores[key]}')
 
     return response.choices[0].message.content

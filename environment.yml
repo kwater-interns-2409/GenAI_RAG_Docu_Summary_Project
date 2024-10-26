@@ -20,7 +20,7 @@ dependencies:
       - streamlit
       - transformers
       - nltk
-      - rouge-score
+      - korouge_score
       - openai
       - langchain-teddynote
       - python-docx
