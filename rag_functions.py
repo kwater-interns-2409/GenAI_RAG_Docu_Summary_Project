@@ -12,6 +12,9 @@ import re
 from nltk.translate.bleu_score import sentence_bleu
 from rouge_score import rouge_scorer
 from openai import OpenAI
+import pysqlite3
+import sys
+sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
 import chromadb
 
 # huggingface 모델 사용하기 위해 필요한 개인키
@@ -34,6 +37,9 @@ def load_docs(files):
     #확장자에 따라 문서를 로드한다.
     documents=[]
     for file in [os.path.join(data_path, f) for f in os.listdir(data_path)]:
+        f=open(file, 'r')
+        lines=f.readlines()
+        law_name=[x for x in lines if x.strip()][0]
         ext=file.split(".")[-1]
         if ext=="pdf":
             loader=PyPDFLoader(file)
@@ -44,6 +50,9 @@ def load_docs(files):
         elif ext=="hwp":
             loader=HWPLoader(file)
         documents += loader.load()
+        documents[-1].metadata["law_name"]=law_name
+        print("law name is")
+        print(law_name.strip())
 
     # RecursiveCharacterTextSplitter는 chunk 크기보다 separators를 더 중요시해 이상한 지점에 문서를 나누기보다 줄 끝과 단어 사이에
     # 나누기 때문에 선택하게 되었다.
@@ -59,7 +68,6 @@ def load_docs(files):
     splits=[]
     for doc in documents:
         splits += text_splitter.split_documents([doc])
-    
     return splits
 
 #chroma를 이용해서 나누어진 문서 chunk들을 임베드하고 벡터스토어를 만든다.
@@ -111,6 +119,7 @@ def create_rag_chain(vectorstore, question, on):
     if on:
         prompt_template = """아래의 문맥을 사용하여 질문에 답하십시오.
         최대한 세 문장으로 답하고 가능한 간결하게 유지하십시오.
+        가능하면 답변 정보가 있는 법률를 답변 앞에 포함하십시오.
         하지만, 질문이 문맥과 관련이 없으면 수자원공사의 공식 웹사이트나 고객센터에 문의하라고 말씀하십시오.
         {context}
         질문: {question}
@@ -133,7 +142,7 @@ def create_rag_chain(vectorstore, question, on):
     def format_docs(docs):
         # print("check format docs")
         # print(docs)
-        return "\n\n".join(doc.page_content for doc in docs)
+        return "\n\n".join(doc.metadata['law_name']+doc.page_content for doc in docs)
 
     #template에 정보와 질문을 넣은 후 모델에 던져 대답을 받는다.
     if on:
@@ -172,15 +181,16 @@ def create_github_rag_chain(vectorstore, question, on):
     client=OpenAI(api_key=githubkey, base_url="https://models.inference.ai.azure.com")
     
     def format_docs(docs):
-        return "\n\n".join(doc.page_content for doc in docs)
+        return "\n\n".join(doc.metadata['law_name']+doc.page_content for doc in docs)
     
     if on:
         message=[
             {
                 "role": "system",
                 "content": f"""아래의 문맥을 사용하여 질문에 답하십시오.
-                만약 답을 모른다면, 모른다고 말하고 답을 지어내지 마십시오.
-                최대한 세 문장으로 답하고 가능한 한 간결하게 유지하십시오.
+                최대한 세 문장으로 답하고 가능한 간결하게 유지하십시오.
+                가능하면 답변 정보가 있는 법률를 답변 앞에 포함하십시오.
+                하지만, 질문이 문맥과 관련이 없으면 수자원공사의 공식 웹사이트나 고객센터에 문의하라고 말씀하십시오.
                 {format_docs(vectorstore.as_retriever().invoke(question))}"""
             },
             {
@@ -200,7 +210,7 @@ def create_github_rag_chain(vectorstore, question, on):
                 "content": f'{question}'
             }
         ]
-
+    print(message)
     response=client.chat.completions.create(
         messages=message,
         temperature=1.0,
