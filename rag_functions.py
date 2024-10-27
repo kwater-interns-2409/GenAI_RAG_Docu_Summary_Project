@@ -3,6 +3,7 @@ import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain.prompts import PromptTemplate
+from langchain.docstore.document import Document
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_teddynote.document_loaders import HWPLoader
@@ -37,9 +38,6 @@ def load_docs(files):
     #확장자에 따라 문서를 로드한다.
     documents=[]
     for file in [os.path.join(data_path, f) for f in os.listdir(data_path)]:
-        f=open(file, 'r')
-        lines=f.readlines()
-        law_name=[x for x in lines if x.strip()][0]
         ext=file.split(".")[-1]
         if ext=="pdf":
             loader=PyPDFLoader(file)
@@ -50,9 +48,21 @@ def load_docs(files):
         elif ext=="hwp":
             loader=HWPLoader(file)
         documents += loader.load()
+        law_name=next(s for s in documents[-1].page_content.split('\n') if s)
         documents[-1].metadata["law_name"]=law_name
         print("law name is")
         print(law_name.strip())
+    
+    if not documents:
+        if not os.path.exists("dummy.txt"):
+            f=open("dummy.txt", "w")
+            f.write("dummy text")
+        else:
+            f=open("dummy.txt", "r")
+        documents+=TextLoader("dummy.txt").load()
+        f.close()
+        documents[-1].page_content="dummy text"
+        os.remove("dummy.txt")
 
     # RecursiveCharacterTextSplitter는 chunk 크기보다 separators를 더 중요시해 이상한 지점에 문서를 나누기보다 줄 끝과 단어 사이에
     # 나누기 때문에 선택하게 되었다.
@@ -68,6 +78,7 @@ def load_docs(files):
     splits=[]
     for doc in documents:
         splits += text_splitter.split_documents([doc])
+    
     return splits
 
 #chroma를 이용해서 나누어진 문서 chunk들을 임베드하고 벡터스토어를 만든다.
@@ -219,6 +230,8 @@ def create_github_rag_chain(vectorstore, question, on):
         model="gpt-4o-mini"
     )
 
+    print(message)
+
     # 평가점수 얻기 위한 테스트용 코드
     reference_str="""1. 이용하려는 토지의 도면
     2. 매립폐기물의 종류ㆍ양 및 복토상태를 적은 서류
@@ -230,5 +243,6 @@ def create_github_rag_chain(vectorstore, question, on):
     scores=scorer.score(reference_str, response.choices[0].message.content)
     for key in scores:
         print(f'\t{key}: {scores[key]}')
-
+    print(len(response.choices))
+    print(response.choices[:10])
     return response.choices[0].message.content
